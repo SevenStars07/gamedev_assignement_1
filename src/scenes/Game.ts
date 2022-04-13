@@ -9,7 +9,7 @@ export default class Main extends Phaser.Scene {
   cursors: any;
   platformGroup!: Phaser.Physics.Arcade.StaticGroup;
   endPlatforms: Phaser.Types.Physics.Arcade.SpriteWithStaticBody[] = [];
-  lives: number = 3;
+  lives: number = 10000;
   score: number = 0;
   livesText!: Phaser.GameObjects.Text;
   gameOverText!: Phaser.GameObjects.Text;
@@ -21,12 +21,18 @@ export default class Main extends Phaser.Scene {
   timeSinceLastAttack: number = 0;
   attackTime: number = 750;
   shouldPlayIdleAnimation: boolean = true;
+  flag: any;
 
   preload() {
     this.load.image("leftTile", "assets/map/tiles/Tile_01.png");
     this.load.image("middleTile", "assets/map/tiles/Tile_02.png");
     this.load.image("rightTile", "assets/map/tiles/Tile_03.png");
     this.load.image("dude", "assets/entities/dude.png");
+    this.load.image("flag", "assets/map/flag.png");
+    this.load.image("lava1", "assets/map/lava/lava_tile1.png");
+    this.load.image("lava2", "assets/map/lava/lava_tile2.png");
+    this.load.image("lava3", "assets/map/lava/lava_tile3.png");
+    this.load.image("lava4", "assets/map/lava/lava_tile4.png");
     this.load.spritesheet("enemy", "assets/entities/enemy1/idle.png", {
       frameWidth: 48,
       frameHeight: 48,
@@ -103,6 +109,18 @@ export default class Main extends Phaser.Scene {
 
   private addCollisions() {
     this.physics.add.collider(this.player, this.platformGroup);
+
+    this.physics.add.collider(this.player, this.flag, () => {
+      let time = this.time.now;
+      let minutes = Math.floor(time / 60000);
+      let seconds = Math.floor((time % 60000) / 1000);
+      let formattedTime = `${minutes} minutes and ${seconds} seconds`;
+      this.scene.start("GameOverScene", {
+        score: this.score,
+        time: formattedTime,
+        didWin: true,
+      });
+    });
   }
 
   update(time: number, delta: number): void {
@@ -267,9 +285,17 @@ export default class Main extends Phaser.Scene {
       enemy.destroy();
     });
 
-    this.gameOverText.setVisible(true);
-
-    // this.scene.start("GameOverScene");
+    // this.gameOverText.setVisible(true);
+    // transform milliseconds in minutes:seconds
+    let time = this.time.now;
+    let minutes = Math.floor(time / 60000);
+    let seconds = Math.floor((time % 60000) / 1000);
+    let formattedTime = `${minutes} minutes and ${seconds} seconds`;
+    this.scene.start("GameOverScene", {
+      score: this.score,
+      time: formattedTime,
+      didWin: false,
+    });
   }
 
   createWorld() {
@@ -279,6 +305,7 @@ export default class Main extends Phaser.Scene {
     this.createPlatform(100, 400, 3);
     this.createPlatform(400, 570, 8);
     this.createPlatform(500, 400, 5);
+    this.createLava();
 
     let lastX = 500;
     let lastY = 400;
@@ -296,6 +323,18 @@ export default class Main extends Phaser.Scene {
       lastY = Phaser.Math.Between(570, 400);
       lastLength = Phaser.Math.Between(1, 10);
       this.createPlatform(lastX, lastY, lastLength);
+
+      // spawn flag on last platform
+      if (i === 9) {
+        const position =
+          this.endPlatforms[this.endPlatforms.length - 1].body.position;
+
+        this.flag = this.physics.add
+          .sprite(position.x + 10, position.y - 32, "flag")
+          .setScale(0.5);
+
+        this.flag.body.setAllowGravity(false);
+      }
     }
   }
 
@@ -315,9 +354,9 @@ export default class Main extends Phaser.Scene {
   }
 
   createPlayerAndAnimations() {
-    this.player = this.physics.add.sprite(0, 520, "dude");
+    this.player = this.physics.add.sprite(30, 500, "dude");
     this.player.body.setSize(32, 32, true);
-    this.lives = 3;
+    this.lives = 1000;
     this.player.setCollideWorldBounds(true);
     this.player.body.onWorldBounds = true;
     this.player.setBounce(0.1);
@@ -406,14 +445,16 @@ export default class Main extends Phaser.Scene {
   }
 
   createUi() {
-    this.gameOverText = this.add.text(
-      Number(this.game.config.width) / 2,
-      Number(this.game.config.height) / 2,
-      "Game Over",
-      {
-        fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif',
-      }
-    );
+    this.gameOverText = this.add
+      .text(
+        Number(this.game.config.width) / 2,
+        Number(this.game.config.height) / 2,
+        "Game Over",
+        {
+          fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif',
+        }
+      )
+      .setOrigin(0.5);
     this.gameOverText.setScrollFactor(0);
     this.gameOverText.setVisible(false);
 
@@ -427,5 +468,18 @@ export default class Main extends Phaser.Scene {
     });
 
     this.livesText.setScrollFactor(0);
+  }
+
+  createLava() {
+    let lastX = -300;
+    let lastY = 600;
+    for (let i = 0; i < 1000; i++) {
+      this.add.image(lastX, lastY, "lava3").setScale(2, 1);
+
+      for (let j = 1; j < 5; j++) {
+        this.add.image(lastX, lastY + j * 64, "lava1").setScale(2, 1);
+      }
+      lastX = lastX + 128;
+    }
   }
 }
