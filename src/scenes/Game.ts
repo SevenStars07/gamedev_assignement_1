@@ -356,7 +356,7 @@ export default class Main extends Phaser.Scene {
   createPlayerAndAnimations() {
     this.player = this.physics.add.sprite(30, 500, "dude");
     this.player.body.setSize(32, 32, true);
-    this.lives = 1000;
+    this.lives = 3;
     this.player.setCollideWorldBounds(true);
     this.player.body.onWorldBounds = true;
     this.player.setBounce(0.1);
